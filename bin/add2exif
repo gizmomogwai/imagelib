@@ -1,0 +1,15 @@
+#!/usr/bin/env ruby
+
+if ARGV.length != 5
+  raise 'Usage add2exif pattern yDelta mDelta dDelta hDelta'
+end
+
+pattern = ARGV[0]
+delta = ARGV[1..4]
+Dir.glob(pattern).each do | file |
+  if ((file != '.') && (file != '..')) then
+    exe = '/Users/gizmo/_projects/_sg3/trunk/rake/target/exes/add2exif.exe'
+    puts "Working on #{file}"
+    system(exe, file, delta[0], delta[1], delta[2], delta[3])
+  end
+end
