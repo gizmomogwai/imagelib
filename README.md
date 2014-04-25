@@ -1,24 +1,29 @@
 # Imagelib
 
-TODO: Write a gem description
+This is a little gem to support my photo workflow.
 
 ## Installation
 
-Add this line to your application's Gemfile:
-
-    gem 'imagelib'
-
-And then execute:
-
-    $ bundle
-
-Or install it yourself as:
-
-    $ gem install imagelib
+    gem install imagelib
 
 ## Usage
 
-TODO: Write usage instructions here
+You just have to add a .imagelib file to your home which is a yaml file describing
+where images can be found and what prefix images from these source should get.
+example:
+
+    -
+      path: /Volumes/MyGoodCam
+      prefix: hq_
+    -
+      path: /Volumes/MyLittleCam
+      prefix: lq_
+
+this means that pictures that can be found in /Volumes/MyGoodCam are copied to ~/Pictures/ImageLib with the prefix hq_ and pictures that can be found in /Volumes/MyLittleCam are copied to ~/Pictures/ImageLib with the prefix lq_.
+
+After that you are ready to launch the executable
+
+    $ copy2lib
 
 ## Contributing
 

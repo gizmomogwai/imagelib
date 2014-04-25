@@ -80,7 +80,7 @@ end
 def process_commandline(args)
   configs = []
   if (args.size == 0) then
-    configs = YAML::load_file("#{HOME}/.imagelib2")
+    configs = YAML::load_file("#{HOME}/.imagelib")
   else
     i = 0
     while i < args.size
