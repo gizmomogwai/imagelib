@@ -1,0 +1,3 @@
+#!/usr/bin/env ruby
+require 'imagelib/copy2lib'
+copy_to_lib(ARGV)
