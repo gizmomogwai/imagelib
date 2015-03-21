@@ -1,46 +1,87 @@
 #!/usr/bin/env ruby
+# coding: utf-8
 HOME = ENV['HOME']
 OUT_DIR = "#{HOME}/Pictures/ImageLib"
 PATTERN = '**/*.{jpg,JPG,avi,AVI,wav,WAV,CR2}'
 require 'FileUtils'
-require 'rubygems'
-gem 'progressbar'
-require 'progressbar'
+require 'ruby-progressbar'
 require 'yaml'
-
+require 'imagelib/mtp_storage'
+require 'imagelib/file_storage'
+require 'colorize'
+ERRORS = []
 class Copy
+  class Result
+    def initialize(filename, ok, cause = nil)
+      @filename = filename
+      @ok = ok
+      @cause = cause
+    end
+    def self.positive(filename)
+      return Result.new(filename, true)
+    end
+    def self.negative(filename, cause)
+      return Result.new(filename, false, cause)
+    end
+    def to_s()
+      return " OK : #{@filename}".green if @ok
+      return "NOK : #{@filename} (#{@cause})".red
+    end
+  end
   attr_reader :filename, :prefix, :creation_date, :target_path
-  def initialize(filename, prefix)
-    @filename = filename
+  def initialize(file, prefix)
+    @file = file
     @prefix = prefix
-    @creation_date = File.mtime(filename)
-    @target_path = sprintf("%s/%d/%02d/%d-%02d-%02d",
-                           OUT_DIR,
-                           @creation_date.year,
-                           @creation_date.month,
-                           @creation_date.year,
-                           @creation_date.month,
-                           @creation_date.day)
-    @target_filename = "#{@target_path}/#{@prefix}#{File.basename(@filename)}"
-    @flag_filename = "#{@filename}.#{ENV['LOGNAME']}"
+    #    @creation_date = File.mtime(filename)
+    #    @target_path = sprintf("%s/%d/%02d/%d-%02d-%02d",
+    #                           OUT_DIR,
+    #                           @creation_date.year,
+    #                           @creation_date.month,
+    #                           @creation_date.year,
+    #                           @creation_date.month,
+    #                           @creation_date.day)
+    #    @target_filename = "#{@target_path}/#{@prefix}#{File.basename(@filename)}"
+    #    @flag_filename = "#{@filename}.#{ENV['LOGNAME']}"
   end
 
-  def prepare
-    FileUtils::mkdir_p(@target_path)
+  def prepare(path)
+    d = File.split(path).first
+    FileUtils::mkdir_p(d)
   end
 
   def copy
-    if (work_to_do?)
-      puts "#{@filename} -> #{@target_filename}"
-      FileUtils::cp(@filename, @target_filename, :preserve=>true )
-      File.open(@flag_filename, 'w') { |file| }
-      return @target_filename
+    suffix = ".#{ENV['LOGNAME']}"
+    if (work_to_do?(suffix))
+      begin
+        data = @file.get()
+        t = target_file_name(@file, data)
+        prepare(t)
+        File.write(t, data)
+        @file.mark_as_copied(suffix)
+        return Result.positive(@file.path)
+      rescue Exception => e
+        return Result.negative(@file.path, e)
+      end
     end
   end
 
-  def work_to_do?
-    return !(File.exists?(@target_filename) or
-             File.exists?(@flag_filename))
+  def target_file_name(file, data)
+    begin
+      require 'exifr'
+      exif = EXIFR::JPEG.new(StringIO.new(data))
+      d = exif.date_time_original
+    rescue Exception
+    end
+    unless d
+      d = file.modification_time
+    end
+    target_path = sprintf("%s/%d/%02d/%d-%02d-%02d",
+                          OUT_DIR, d.year, d.month, d.year, d.month, d.day)
+    File.join(target_path, @prefix + File.basename(file.path))
+  end
+
+  def work_to_do?(suffix)
+    @file.work_to_do?(suffix)
   end
 
   def to_s
@@ -48,30 +89,44 @@ class Copy
   end
 end
 
-
 def collect_images(configs)
   images = []
-  configs.each do |config|
-    path = config['path'].strip
-    files = Dir.glob("#{path}/#{PATTERN}")
-    files.each do |file|
-      images << Copy.new(file, config['prefix'])
+  configs[0].each do |config|
+    puts config
+    path = config['path']
+    m = path.match(Regexp.new("(.*)://(.*?)/(.*)"))
+    next unless m
+
+    clazz = m[1] + "Storage"
+    clazz[0] = clazz[0].upcase
+    begin
+      handler = Object.const_get(clazz).new(m[2], m[3])
+      begin
+      files = handler.glob(PATTERN).sort{|i,j|i.path<=>j.path}
+      puts "#{handler} globbed #{files.size} for #{PATTERN} on #{path}"
+      files.each do |file|
+        images << Copy.new(file, config['prefix'])
+      end
+    ensure
+      puts "closing #{handler}"
+      handler.close()
+      end
+    rescue Exception => e
+      puts e
     end
   end
   return images
 end
 
-
 def copy_images(images)
-  progress = ProgressBar.new("copy #{images.length} files", images.size)
+  progress = ProgressBar.create(:title => "copy #{images.size} files", :total => images.size, :format => '%t %c / %C : %B Rate: %R %E')
   copied_images = Array.new
-  images.each do | copy |
-    copy.prepare
-    res = copy.copy
+  images.each do | to_copy |
+    res = to_copy.copy
     if res
       copied_images << res
     end
-    progress.inc
+    progress.increment
   end
   progress.finish
   return copied_images
@@ -79,8 +134,9 @@ end
 
 def process_commandline(args)
   configs = []
-  if (args.size == 0) then
-    configs = YAML::load_file("#{HOME}/.imagelib")
+  if (args.size == 0)
+    config_file_path = File.join(ENV['HOME'], '.imagelib')
+    configs = YAML::load_file(config_file_path)
   else
     i = 0
     while i < args.size
@@ -90,20 +146,23 @@ def process_commandline(args)
       i = i + 2
     end
   end
+  configs
 end
 
 def report_result(copied_images)
-  puts "copied images: #{copied_images.size}"
-  copied_images.sort.each do | i |
+  puts "copied images: #{copied_images.size}".green
+  copied_images.each do | i |
     puts "copied #{i}"
   end
 end
 
 def copy_to_lib(args)
+  puts 1
+  suffix = ".#{ENV['LOGNAME']}"
   configs = process_commandline(args)
   images = collect_images(configs)
   images = images.sort{ |a,b| a.filename <=> b.filename }
-  images = images.select{ |copy| copy.work_to_do? }
+  images = images.select{ |copy| copy.work_to_do?(suffix) }
   copied_images = copy_images(images)
   report_result(copied_images)
 end
