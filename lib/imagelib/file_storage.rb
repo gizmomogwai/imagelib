@@ -20,6 +20,9 @@ class FileObject
   def to_s()
     path
   end
+  def modification_time
+    File.mtime(@path)
+  end
 end
 
 class FileStorage

@@ -2,7 +2,7 @@
 # coding: utf-8
 HOME = ENV['HOME']
 OUT_DIR = "#{HOME}/Pictures/ImageLib"
-PATTERN = '**/*.{jpg,JPG,avi,AVI,wav,WAV,CR2}'
+PATTERN = '**/*.{jpg,JPG,avi,AVI,wav,WAV,CR2,mp4}'
 require 'FileUtils'
 require 'ruby-progressbar'
 require 'yaml'
@@ -12,19 +12,20 @@ require 'colorize'
 ERRORS = []
 class Copy
   class Result
-    def initialize(filename, ok, cause = nil)
+    def initialize(filename, target, ok, cause = nil)
       @filename = filename
+      @target = target
       @ok = ok
       @cause = cause
     end
-    def self.positive(filename)
+    def self.positive(filename, destination)
       return Result.new(filename, true)
     end
-    def self.negative(filename, cause)
+    def self.negative(filename, destination, cause)
       return Result.new(filename, false, cause)
     end
     def to_s()
-      return " OK : #{@filename}".green if @ok
+      return " OK : #{@filename} -> #{@target}".green if @ok
       return "NOK : #{@filename} (#{@cause})".red
     end
   end
@@ -58,9 +59,9 @@ class Copy
         prepare(t)
         File.write(t, data)
         @file.mark_as_copied(suffix)
-        return Result.positive(@file.path)
+        return Result.positive(@file.path, t)
       rescue Exception => e
-        return Result.negative(@file.path, e)
+        return Result.negative(@file.path, t, e)
       end
     end
   end
@@ -90,9 +91,10 @@ class Copy
 end
 
 def collect_images(configs)
+  puts "configs #{configs}"
   images = []
-  configs[0].each do |config|
-    puts config
+  configs.each do |config|
+    puts "config #{config}"
     path = config['path']
     m = path.match(Regexp.new("(.*)://(.*?)/(.*)"))
     next unless m

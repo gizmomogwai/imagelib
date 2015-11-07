@@ -156,6 +156,7 @@ class FS < Hash
     while true
       folder_path = @folders[file[:parent]].path
       file_path = File.join(folder_path, file[:filename].read_string())
+      puts file_path
       self[file_path] = file
       h = file[:next]
       break if h == nil
