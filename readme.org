@@ -1,4 +1,4 @@
-* Imagelib
+* Imagelib [[https://travis-ci.org/gizmomogwai/imagelib][https://travis-ci.org/gizmomogwai/imagelib.svg?branch=master]]
 
 This is a little gem to support my photo workflow.
 
