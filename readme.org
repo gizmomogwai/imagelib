@@ -11,7 +11,7 @@ This is a little gem to support my photo workflow.
 You just have to add a .imagelib file to your home which is a yaml file describing
 where images can be found and what prefix images from these source should get.
 example:
-
+#+BEGIN_QUOTE
     -
       path: file:///Volumes/MyGoodCam
       prefix: hq_
@@ -21,6 +21,7 @@ example:
     -
       path: mtp://20194/DCIM/Camera
       prefix: my_mtp_phone_
+#+END_QUOTE
 
 this means that pictures that can be found in /Volumes/MyGoodCam are
 copied to ~/Pictures/ImageLib with the prefix hq_ and pictures that
@@ -29,8 +30,9 @@ with the prefix lq_. The library also supports mtp, there you use the
 mtp id of your device and a path on the device to copy the images over.
 
 After that you are ready to launch the executable
-
-    $ copy2lib
+#+BEGIN_SOURCE shell
+    copy2lib
+#+END_SOURCE
 
 ** Contributing
 
