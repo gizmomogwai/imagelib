@@ -96,13 +96,25 @@ module LibMtpBinding
     end
     def send(device, to_send)
       p = Proc.new do |params, user_data, wanted, data, got|
+        puts "params #{params}"
+        puts "user_data #{user_data}"
+        puts "wanted #{wanted}"
+        puts "data #{data}"
+        puts "got #{got}"
+        #puts "to_send #{to_send.class} #{to_send}"
         todo = [wanted, to_send.length].min
         data.write_bytes(to_send, 0, todo)
         to_send = to_send[todo..-1]
         got.put_uint32(0, todo)
         0
       end
+      puts "send_file_from_handler"
+      puts device
+      puts p
+      puts self
       h = LibMtpBinding::LIBMTP_Send_File_From_Handler(device, p, nil, self, nil, nil)
+      puts "send_file_from_handler: #{h}"
+      h
     end
   end
 
@@ -132,6 +144,7 @@ module LibMtpBinding
   attach_function :LIBMTP_Delete_Object, [:pointer, :uint], :int
   attach_function :LIBMTP_Get_Filelisting_With_Callback, [:pointer, :progress_function, :pointer], :pointer
   attach_function :LIBMTP_Get_Folder_List, [:pointer], :pointer
+  attach_function :LIBMTP_Dump_Errorstack, [:pointer], :void
 end
 
 
@@ -154,7 +167,11 @@ class FS < Hash
     pb.finish
     puts
     while true
-      folder_path = @folders[file[:parent]].path
+      folder_path = ""
+      parent_id = file[:parent]
+      parent = @folders[parent_id]
+      folder_path = parent.path if parent
+
       file_path = File.join(folder_path, file[:filename].read_string())
       puts file_path
       self[file_path] = file
@@ -181,22 +198,27 @@ class MtpFile
     @path = path
   end
   def work_to_do?(suffix)
-    @fs.glob(@path + suffix)
+    @fs.glob(@path + suffix).size == 0
   end
   def get()
     @fs[@path].get(@device)
   end
   def mark_as_copied(suffix)
+    puts "mark_as_copied (#{suffix} #{path})"
     d, base = File.split(@path)
     name = base + suffix
     f = LibMtpBinding::File.new()
     f.clear()
-    f[:size] = 1
     mem = LibC.malloc(name.length + 1)
     mem.write_string(name)
-    f[:filename] = mem#name#.write_pointer(mem)
+    puts d
+    puts base
+    puts name
+    puts @fs[d][:id]
     f[:parent] = @fs[d][:id]
     f[:storage] = 0
+    f[:filename] = mem
+    f[:size] = 1
     f[:type] = 44
     res = f.send(@device, "X")
   end
@@ -216,7 +238,6 @@ class MtpStorage
   def initialize(device_id, path)
     @path = path
     LibMtpBinding.LIBMTP_Init()
-    #@device = MtpDevices::find(device_id.to_i)
     @device = LibMtpBinding::LIBMTP_Get_First_Device()
     raise 'device not found' if @device.null?
     @fs = FS.new(@device, LibMtpBinding::LIBMTP_Get_Folder_List(@device))
@@ -274,40 +295,29 @@ end
 #  mtp_storage.close()
 #end
 
-module MtpDevices
-  def self.list()
-    list = FFI::MemoryPointer.new(:pointer, 1)
-    count = FFI::MemoryPointer.new(:int, 1)
-    res = LibMtpBinding::LIBMTP_Detect_Raw_Devices(list, count)
-    return if res != nil
-
-    p = LibMtpBinding::RawDevice.new(list.get_pointer(0))
-    puts "#{count.read_int} devices"
-    puts p[:device][:vendor]
-    puts p[:device][:product]
-    puts p[:device][:product_id]
+class MtpDevices
+  def initialize()
+    LibMtpBinding.LIBMTP_Init()
   end
 
-  def self.find(product_id)
+  def list()
     list = FFI::MemoryPointer.new(:pointer, 1)
     count = FFI::MemoryPointer.new(:int, 1)
     res = LibMtpBinding::LIBMTP_Detect_Raw_Devices(list, count)
-    return nil if res != 0
+    raise "problems detecting raw devices" if res != 0
 
-    (0..count.read_int()).each do |idx|
-      raw_device = LibMtpBinding::RawDevice.new(list.get_pointer(idx))
-      device = raw_device[:device]
-      if device[:product_id] == product_id
-        ptr = LibMtpBinding::LIBMTP_Open_Raw_Device(device)
-        puts ptr
-        res = LibMtpBinding::DeviceEntry.new(ptr)
-
-        puts res[:vendor]
-        puts res[:product]
-        return res
-      end
+    count = count.read_int
+    puts "#{count} devices"
+    (0...count).map do |i|
+      p = list.get_pointer(i)
+      puts "pointer: #{p}"
+      ptr = LibMtpBinding::LIBMTP_Open_Raw_Device(p)
+      LibMtpBinding::DeviceEntry.new(ptr)
     end
+  end
 
-    raise "no mtp device with product id #{product_id} found"
+  def find(product_id)
+    list.select{|device|device[:device][:product_id] == product_id}
   end
 end
+

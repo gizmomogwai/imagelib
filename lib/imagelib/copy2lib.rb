@@ -2,7 +2,8 @@
 # coding: utf-8
 HOME = ENV['HOME']
 OUT_DIR = "#{HOME}/Pictures/ImageLib"
-PATTERN = '**/*.{jpg,JPG,avi,AVI,wav,WAV,CR2,mp4}'
+PATTERN = '**/*.{jpg,JPG,avi,AVI,wav,WAV,CR2}'#,mp4}'
+#PATTERN = '**/IMG_20150719_110015.jpg'
 require 'FileUtils'
 require 'ruby-progressbar'
 require 'yaml'
@@ -19,10 +20,10 @@ class Copy
       @cause = cause
     end
     def self.positive(filename, destination)
-      return Result.new(filename, true)
+      return Result.new(filename, destination, true)
     end
     def self.negative(filename, destination, cause)
-      return Result.new(filename, false, cause)
+      return Result.new(filename, destination, false, cause)
     end
     def to_s()
       return " OK : #{@filename} -> #{@target}".green if @ok
@@ -55,12 +56,15 @@ class Copy
     if (work_to_do?(suffix))
       begin
         data = @file.get()
+        puts data.size
         t = target_file_name(@file, data)
         prepare(t)
         File.write(t, data)
-        @file.mark_as_copied(suffix)
+        #@file.mark_as_copied(suffix)
         return Result.positive(@file.path, t)
       rescue Exception => e
+        puts e
+        puts e.backtrace
         return Result.negative(@file.path, t, e)
       end
     end
@@ -82,7 +86,9 @@ class Copy
   end
 
   def work_to_do?(suffix)
-    @file.work_to_do?(suffix)
+    res = @file.work_to_do?(suffix)
+    puts res
+    res
   end
 
   def to_s
@@ -104,17 +110,21 @@ def collect_images(configs)
     begin
       handler = Object.const_get(clazz).new(m[2], m[3])
       begin
-      files = handler.glob(PATTERN).sort{|i,j|i.path<=>j.path}
-      puts "#{handler} globbed #{files.size} for #{PATTERN} on #{path}"
-      files.each do |file|
-        images << Copy.new(file, config['prefix'])
-      end
-    ensure
-      puts "closing #{handler}"
-      handler.close()
+        files = handler.glob(PATTERN).sort{|i,j|i.path<=>j.path}
+        puts "#{handler} globbed #{files.size} for #{PATTERN} on #{path}"
+        files.each do |file|
+          images << Copy.new(file, config['prefix'])
+        end
+      rescue Exception => e2
+        puts e2
+        puts e2.back
+      ensure
+        puts "closing #{handler}"
+        handler.close()
       end
     rescue Exception => e
       puts e
+      puts e.backtrace
     end
   end
   return images
@@ -159,7 +169,25 @@ def report_result(copied_images)
 end
 
 def copy_to_lib(args)
-  puts 1
+  #  devices = MtpDevices.new
+  #  device = devices.list.first
+  #
+  #  f = LibMtpBinding::File.new()
+  #  f.clear()
+  #  name = "test2.gizmo"
+  #  mem = LibC.malloc(name.length + 1)
+  #  mem.write_string(name)
+  #  f[:parent] = 94
+  #  f[:storage] = 0
+  #  f[:filename] = mem
+  #  f[:size] = 1
+  #  f[:type] = 44
+  #  puts "got device"
+  #  res = f.send(device, "X")
+  #  puts res
+  #  LibMtpBinding::LIBMTP_Dump_Errorstack(device)
+  #  exit 0
+
   suffix = ".#{ENV['LOGNAME']}"
   configs = process_commandline(args)
   images = collect_images(configs)
@@ -168,3 +196,4 @@ def copy_to_lib(args)
   copied_images = copy_images(images)
   report_result(copied_images)
 end
+#copied  OK : /DCIM/Camera/IMG_20150719_110015.jpg -> /Users/gizmo/Pictures/ImageLib/2015/07/2015-07-19/cks_nexus5_IMG_20150719_110015.jpg
