@@ -4,6 +4,7 @@ class FileObject
     @path = path
   end
   def work_to_do?(suffix)
+    return false if @path.end_with?(suffix)
     return !File.exists?(flag_path(suffix))
   end
   def get()

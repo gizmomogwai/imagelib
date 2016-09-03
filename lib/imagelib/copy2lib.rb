@@ -2,8 +2,7 @@
 # coding: utf-8
 HOME = ENV['HOME']
 OUT_DIR = "#{HOME}/Pictures/ImageLib"
-PATTERN = '**/*.{jpg,JPG,avi,AVI,wav,WAV,CR2}'#,mp4}'
-#PATTERN = '**/IMG_20150719_110015.jpg'
+PATTERN = '**/*.{jpg,JPG,avi,AVI,wav,WAV,CR2,gizmo,mp4,MOV,MP4}'
 require 'FileUtils'
 require 'ruby-progressbar'
 require 'yaml'
@@ -56,15 +55,12 @@ class Copy
     if (work_to_do?(suffix))
       begin
         data = @file.get()
-        puts data.size
         t = target_file_name(@file, data)
         prepare(t)
         File.write(t, data)
-        #@file.mark_as_copied(suffix)
+        @file.mark_as_copied(suffix)
         return Result.positive(@file.path, t)
-      rescue Exception => e
-        puts e
-        puts e.backtrace
+      rescue StandardError => e
         return Result.negative(@file.path, t, e)
       end
     end
@@ -75,7 +71,7 @@ class Copy
       require 'exifr'
       exif = EXIFR::JPEG.new(StringIO.new(data))
       d = exif.date_time_original
-    rescue Exception
+    rescue StandardError
     end
     unless d
       d = file.modification_time
@@ -86,9 +82,7 @@ class Copy
   end
 
   def work_to_do?(suffix)
-    res = @file.work_to_do?(suffix)
-    puts res
-    res
+    return @file.work_to_do?(suffix)
   end
 
   def to_s
@@ -115,14 +109,13 @@ def collect_images(configs)
         files.each do |file|
           images << Copy.new(file, config['prefix'])
         end
-      rescue Exception => e2
+      rescue StandardError => e2
         puts e2
-        puts e2.back
       ensure
         puts "closing #{handler}"
         handler.close()
       end
-    rescue Exception => e
+    rescue StandardError => e
       puts e
       puts e.backtrace
     end
@@ -196,4 +189,3 @@ def copy_to_lib(args)
   copied_images = copy_images(images)
   report_result(copied_images)
 end
-#copied  OK : /DCIM/Camera/IMG_20150719_110015.jpg -> /Users/gizmo/Pictures/ImageLib/2015/07/2015-07-19/cks_nexus5_IMG_20150719_110015.jpg
