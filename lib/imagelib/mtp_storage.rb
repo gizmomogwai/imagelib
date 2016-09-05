@@ -198,6 +198,7 @@ class MtpFile
     @path = path
   end
   def work_to_do?(suffix)
+    puts "work_to_do?(#{suffix}) on #{@path}"
     @fs.glob(@path + suffix).size == 0
   end
   def get()
@@ -211,6 +212,7 @@ class MtpFile
     f.clear()
     mem = LibC.malloc(name.length + 1)
     mem.write_string(name)
+    mem[name.length] = 0
     puts d
     puts base
     puts name

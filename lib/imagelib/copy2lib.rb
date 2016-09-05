@@ -6,8 +6,9 @@ PATTERN = '**/*.{jpg,JPG,avi,AVI,wav,WAV,CR2,gizmo,mp4,MOV,MP4}'
 require 'FileUtils'
 require 'ruby-progressbar'
 require 'yaml'
-require 'imagelib/mtp_storage'
+#require 'imagelib/mtp_storage'
 require 'imagelib/file_storage'
+require 'imagelib/http_storage'
 require 'colorize'
 ERRORS = []
 class Copy
