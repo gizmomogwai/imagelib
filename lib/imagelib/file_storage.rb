@@ -11,7 +11,7 @@ class FileObject
     File.read(@path)
   end
   def flag_path(suffix)
-    "#{path}#{suffix}"
+    "#{path}.#{suffix}"
   end
   def mark_as_copied(suffix)
     File.open(flag_path(suffix), 'w') do |io|
