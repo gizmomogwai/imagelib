@@ -34,6 +34,7 @@ class HttpFile
   def modification_time
     m = Regexp.new(".*PANO_(....)(..)(..)_(..)(..).*").match(@path)
     m = m || Regexp.new(".*VID_(....)(..)(..)_(..)(..).*").match(@path)
+    m = m || Regexp.new(".*IMG_(....)(..)(..)_(..)(..).*").match(@path)
     if m
       res = Time.new(m[1], m[2], m[3], m[4], m[5])
       puts "time from filename: #{res}"
