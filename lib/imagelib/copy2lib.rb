@@ -52,16 +52,20 @@ class Copy
   end
 
   def copy
-    suffix = ".#{ENV['LOGNAME']}"
+    suffix = "#{ENV['LOGNAME']}"
     if (work_to_do?(suffix))
       begin
         data = @file.get()
         t = target_file_name(@file, data)
         prepare(t)
         File.write(t, data)
+        puts "before mark"
         @file.mark_as_copied(suffix)
+        puts "after mark"
         return Result.positive(@file.path, t)
       rescue StandardError => e
+        puts e
+        puts e.backtrace
         return Result.negative(@file.path, t, e)
       end
     end
@@ -72,9 +76,12 @@ class Copy
       require 'exifr'
       exif = EXIFR::JPEG.new(StringIO.new(data))
       d = exif.date_time_original
-    rescue StandardError
+    rescue StandardError => e
+      puts e
+      puts e.backtrace
     end
     unless d
+      puts "falling back to file modification time for #{file}"
       d = file.modification_time
     end
     target_path = sprintf("%s/%d/%02d/%d-%02d-%02d",
@@ -87,7 +94,7 @@ class Copy
   end
 
   def to_s
-    return "#{@filename} with #{prefix}"
+    return "#{@file} with #{prefix}"
   end
 end
 
@@ -103,15 +110,19 @@ def collect_images(configs)
     clazz = m[1] + "Storage"
     clazz[0] = clazz[0].upcase
     begin
+      puts "trying to get #{clazz}"
       handler = Object.const_get(clazz).new(m[2], m[3])
+      puts "got #{clazz}"
       begin
         files = handler.glob(PATTERN).sort{|i,j|i.path<=>j.path}
         puts "#{handler} globbed #{files.size} for #{PATTERN} on #{path}"
+        puts files.map{|f|f.path}.join(', ')
         files.each do |file|
           images << Copy.new(file, config['prefix'])
         end
       rescue StandardError => e2
         puts e2
+        e2.backtrace
       ensure
         puts "closing #{handler}"
         handler.close()
@@ -185,8 +196,18 @@ def copy_to_lib(args)
   suffix = ".#{ENV['LOGNAME']}"
   configs = process_commandline(args)
   images = collect_images(configs)
-  images = images.sort{ |a,b| a.filename <=> b.filename }
-  images = images.select{ |copy| copy.work_to_do?(suffix) }
+  images = images.sort{ |a,b|
+    puts a
+    puts b
+    a.filename <=> b.filename
+  }
+  puts images
+  images = images.select{ |copy|
+    h = copy.work_to_do?(suffix)
+    puts "work to do for #{copy}: #{h}"
+    h
+  }
+  puts "images to do: #{images.size}"
   copied_images = copy_images(images)
   report_result(copied_images)
 end
