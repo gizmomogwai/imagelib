@@ -77,11 +77,8 @@ class Copy
       exif = EXIFR::JPEG.new(StringIO.new(data))
       d = exif.date_time_original
     rescue StandardError => e
-      puts e
-      puts e.backtrace
     end
     unless d
-      puts "falling back to file modification time for #{file}"
       d = file.modification_time
     end
     target_path = sprintf("%s/%d/%02d/%d-%02d-%02d",
@@ -99,37 +96,26 @@ class Copy
 end
 
 def collect_images(configs)
-  puts "configs #{configs}"
   images = []
   configs.each do |config|
-    puts "config #{config}"
     path = config['path']
     m = path.match(Regexp.new("(.*)://(.*?)/(.*)"))
     next unless m
 
     clazz = m[1] + "Storage"
     clazz[0] = clazz[0].upcase
+    handler = Object.const_get(clazz).new(m[2], m[3])
     begin
-      puts "trying to get #{clazz}"
-      handler = Object.const_get(clazz).new(m[2], m[3])
-      puts "got #{clazz}"
-      begin
-        files = handler.glob(PATTERN).sort{|i,j|i.path<=>j.path}
-        puts "#{handler} globbed #{files.size} for #{PATTERN} on #{path}"
-        puts files.map{|f|f.path}.join(', ')
-        files.each do |file|
-          images << Copy.new(file, config['prefix'])
-        end
-      rescue StandardError => e2
-        puts e2
-        e2.backtrace
-      ensure
-        puts "closing #{handler}"
-        handler.close()
+      files = handler.glob(PATTERN).sort{|i,j|i.path<=>j.path}
+      puts "#{handler} globbed #{files.size} for #{PATTERN} on #{path}"
+      files.each do |file|
+        images << Copy.new(file, config['prefix'])
       end
-    rescue StandardError => e
-      puts e
-      puts e.backtrace
+    rescue StandardError => e2
+      puts e2
+      e2.backtrace
+    ensure
+      handler.close()
     end
   end
   return images
@@ -197,17 +183,12 @@ def copy_to_lib(args)
   configs = process_commandline(args)
   images = collect_images(configs)
   images = images.sort{ |a,b|
-    puts a
-    puts b
     a.filename <=> b.filename
   }
-  puts images
   images = images.select{ |copy|
     h = copy.work_to_do?(suffix)
-    puts "work to do for #{copy}: #{h}"
     h
   }
-  puts "images to do: #{images.size}"
   copied_images = copy_images(images)
   report_result(copied_images)
 end
