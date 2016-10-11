@@ -37,11 +37,10 @@ class HttpFile
     m = m || Regexp.new(".*IMG_(....)(..)(..)_(..)(..).*").match(@path)
     if m
       res = Time.new(m[1], m[2], m[3], m[4], m[5])
-      puts "time from filename: #{res}"
       return res
     end
     res = Time.now
-    puts "falling back to #{res}"
+    raise "Could not get time for #{self}"
     return res
   end
 end
@@ -58,14 +57,11 @@ class HttpStorage
     end
   end
   def glob(pattern)
-    puts "globbing '#{pattern}'"
     response = @client.get '/index'
     all = response.body
-    puts "total # of files: #{all.size}"
     filtered = all.select {|f|
       File.fnmatch(pattern, f, File::FNM_EXTGLOB) && !f.include?('/.thumbnails/')
     }
-    puts "filtered # of files: #{filtered.size}"
     return filtered.map{|i|HttpFile.new(@client, i, all)}
   end
   def close
