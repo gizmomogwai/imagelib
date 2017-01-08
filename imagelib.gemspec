@@ -24,6 +24,7 @@ Gem::Specification.new do |spec|
   spec.add_dependency 'colorize'
   spec.add_dependency 'faraday_middleware'
   spec.add_dependency 'byebug'
+  spec.add_dependency 'dnssd'
   spec.add_development_dependency "bundler", "~> 1.3"
   spec.add_development_dependency "rake"
 end

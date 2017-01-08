@@ -4,5 +4,7 @@ task :default => [:install]
 
 desc 'create rvm wrapper'
 task :create_wrapper do
-  sh "rvm wrapper 2.3.1@imagelib copy2lib"
+  version = File.read('.ruby-version').strip
+  gemset = File.read('.ruby-gemset').strip
+  sh "rvm wrapper #{version}@#{gemset} copy2lib"
 end
