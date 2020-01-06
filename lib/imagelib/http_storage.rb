@@ -51,7 +51,7 @@ class HttpStorage
     @path = path[0...-1]
     @client = Faraday.new(url: "http://#{@id}:4567") do |faraday|
       faraday.request :url_encoded
-      faraday.response :logger
+      # faraday.response :logger
       faraday.response :json, :content_type => 'application/json'
       faraday.adapter Faraday.default_adapter
     end
