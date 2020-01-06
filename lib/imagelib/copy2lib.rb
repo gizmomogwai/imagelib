@@ -1,9 +1,10 @@
 #!/usr/bin/env ruby
 # coding: utf-8
+
 HOME = ENV['HOME']
 OUT_DIR = "#{HOME}/Pictures/ImageLib"
-PATTERN = '**/*.{jpg,JPG,avi,AVI,wav,WAV,CR2,gizmo,mp4,MOV,MP4}'
-require 'FileUtils'
+PATTERN = '**/*.{jpg,jpeg,JPG,JPEG,avi,AVI,wav,WAV,CR2,mp4,MOV,MP4}'
+require 'fileutils'
 require 'ruby-progressbar'
 require 'yaml'
 #require 'imagelib/mtp_storage'
@@ -59,9 +60,7 @@ class Copy
         t = target_file_name(@file, data)
         prepare(t)
         File.write(t, data)
-        puts "before mark"
         @file.mark_as_copied(suffix)
-        puts "after mark"
         return Result.positive(@file.path, t)
       rescue StandardError => e
         puts e
@@ -83,7 +82,7 @@ class Copy
     end
     target_path = sprintf("%s/%d/%02d/%d-%02d-%02d",
                           OUT_DIR, d.year, d.month, d.year, d.month, d.day)
-    File.join(target_path, @prefix + File.basename(file.path))
+    File.join(target_path, "#{@prefix}#{File.basename(file.path)}")
   end
 
   def work_to_do?(suffix)
@@ -100,7 +99,10 @@ def collect_images(configs)
   configs.each do |config|
     path = config['path']
     m = path.match(Regexp.new("(.*)://(.*?)/(.*)"))
-    next unless m
+    if m == nil
+      puts "Skipping #{path}"
+      next
+    end
 
     clazz = m[1] + "Storage"
     clazz[0] = clazz[0].upcase
@@ -140,6 +142,7 @@ def process_commandline(args)
   if (args.size == 0)
     config_file_path = File.join(ENV['HOME'], '.imagelib')
     configs = YAML::load_file(config_file_path)
+    puts "Found configs: #{configs}"
   else
     i = 0
     while i < args.size
