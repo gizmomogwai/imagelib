@@ -4,6 +4,8 @@
 HOME = ENV['HOME']
 OUT_DIR = "#{HOME}/Pictures/ImageLib"
 PATTERN = '**/*.{jpg,jpeg,JPG,JPEG,avi,AVI,wav,WAV,CR2,mp4,MOV,MP4}'
+ERRORS = []
+
 require 'fileutils'
 require 'ruby-progressbar'
 require 'yaml'
@@ -11,7 +13,7 @@ require 'yaml'
 require 'imagelib/file_storage'
 require 'imagelib/http_storage'
 require 'colorize'
-ERRORS = []
+
 class Copy
   class Result
     def initialize(filename, target, ok, cause = nil)
