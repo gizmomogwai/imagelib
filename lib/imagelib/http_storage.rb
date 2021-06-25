@@ -1,5 +1,6 @@
 require 'faraday'
 require 'faraday_middleware'
+require 'uri'
 
 class HttpFile
   attr_reader :path
@@ -19,11 +20,11 @@ class HttpFile
     "#{@path}.#{suffix}"
   end
   def get
-    response = @client.get("/files/#{@path}")
+    response = @client.get(URI.encode("/files/#{@path}"))
     return response.body
   end
   def mark_as_copied(suffix)
-    res = @client.post("/files/#{@path}", {filename: @path, suffix: suffix})
+    res = @client.post(URI.encode("/files/#{@path}"), {filename: @path, suffix: suffix})
     if res.status != 200
       raise 'problems while markme'
     end
@@ -35,13 +36,15 @@ class HttpFile
     m = Regexp.new(".*PANO_(....)(..)(..)_(..)(..).*").match(@path)
     m = m || Regexp.new(".*VID_(....)(..)(..)_(..)(..).*").match(@path)
     m = m || Regexp.new(".*IMG_(....)(..)(..)_(..)(..).*").match(@path)
+    m = m || Regexp.new(".*Google Photos/(....)(..)(..)_(..)(..).*").match(@path)
+    m = m || Regexp.new(".*PXL_(....)(..)(..)_(..)(..).*").match(@path)
     if m
       res = Time.new(m[1], m[2], m[3], m[4], m[5])
       return res
     end
     res = Time.now
     raise "Could not get time for #{self}"
-    return res
+    # return res
   end
 end
 
@@ -51,6 +54,7 @@ class HttpStorage
     @path = path[0...-1]
     @client = Faraday.new(url: "http://#{@id}:4567") do |faraday|
       faraday.request :url_encoded
+      faraday.headers = {"accept-encoding": "identity"}
       # faraday.response :logger
       faraday.response :json, :content_type => 'application/json'
       faraday.adapter Faraday.default_adapter
@@ -59,10 +63,11 @@ class HttpStorage
   def glob(pattern)
     response = @client.get '/index'
     all = response.body
-    filtered = all.select {|f|
-      File.fnmatch(pattern, f, File::FNM_EXTGLOB) && !f.include?('/.thumbnails/')
-    }
-    return filtered.map{|i|HttpFile.new(@client, i, all)}
+    return all
+             .select{|f|
+               File.fnmatch(pattern, f, File::FNM_EXTGLOB) && !f.include?('/.thumbnails/')
+             }
+             .map{|i|HttpFile.new(@client, i, all)}
   end
   def close
   end
