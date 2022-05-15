@@ -1,6 +1,6 @@
 require 'faraday'
 require 'faraday_middleware'
-require 'uri'
+require "addressable/uri"
 
 class HttpFile
   attr_reader :path
@@ -20,11 +20,11 @@ class HttpFile
     "#{@path}.#{suffix}"
   end
   def get
-    response = @client.get(URI.encode("/files/#{@path}"))
+    response = @client.get(Addressable::URI.encode("/files/#{@path}"))
     return response.body
   end
   def mark_as_copied(suffix)
-    res = @client.post(URI.encode("/files/#{@path}"), {filename: @path, suffix: suffix})
+    res = @client.post(Addressable::URI.encode("/files/#{@path}"), {filename: @path, suffix: suffix})
     if res.status != 200
       raise 'problems while markme'
     end
@@ -63,6 +63,7 @@ class HttpStorage
   def glob(pattern)
     response = @client.get '/index'
     all = response.body
+    pp all
     return all
              .select{|f|
                File.fnmatch(pattern, f, File::FNM_EXTGLOB) && !f.include?('/.thumbnails/')
