@@ -163,6 +163,9 @@ def report_result(copied_images)
     puts "copied #{i}"
   end
 end
+def calc_suffix
+  return ENV["OVERRIDE_LOGNAME"] || ENV["LOGNAME"]
+end
 
 def copy_to_lib(args)
   #  devices = MtpDevices.new
@@ -184,7 +187,7 @@ def copy_to_lib(args)
   #  LibMtpBinding::LIBMTP_Dump_Errorstack(device)
   #  exit 0
 
-  suffix = ".#{ENV['LOGNAME']}"
+  suffix = ".#{calc_suffix}"
   configs = process_commandline(args)
   images = collect_images(configs)
   images = images.sort{ |a,b|
