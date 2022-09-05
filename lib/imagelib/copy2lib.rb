@@ -142,7 +142,7 @@ end
 def process_commandline(args)
   configs = []
   if (args.size == 0)
-    config_file_path = File.join(ENV['HOME'], '.imagelib')
+    config_file_path = File.join(ENV['HOME'], '.config', 'imagelib.yaml')
     configs = YAML::load_file(config_file_path)
     puts "Found configs: #{configs}"
   else
