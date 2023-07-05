@@ -2,7 +2,7 @@
 # coding: utf-8
 
 HOME = ENV['HOME']
-OUT_DIR = "#{HOME}/Pictures/ImageLib"
+OUT_DIR = "/Volumes/ImageLib/Pictures/ImageLib"
 PATTERN = '**/*.{jpg,jpeg,JPG,JPEG,avi,AVI,wav,WAV,CR2,mp4,MOV,MP4}'
 ERRORS = []
 
@@ -55,7 +55,7 @@ class Copy
   end
 
   def copy
-    suffix = "#{ENV['LOGNAME']}"
+    suffix = calc_suffix
     if (work_to_do?(suffix))
       begin
         data = @file.get()
@@ -113,7 +113,9 @@ def collect_images(configs)
       files = handler.glob(PATTERN).sort{|i,j|i.path<=>j.path}
       puts "#{handler} globbed #{files.size} for #{PATTERN} on #{path}"
       files.each do |file|
-        images << Copy.new(file, config['prefix'])
+        if !file.path.include?("trash")
+          images << Copy.new(file, config['prefix'])
+        end
       end
     rescue StandardError => e2
       puts e2
@@ -126,9 +128,10 @@ def collect_images(configs)
 end
 
 def copy_images(images)
-  progress = ProgressBar.create(:title => "copy #{images.size} files", :total => images.size, :format => '%t %c / %C : %B Rate: %R %E')
+  progress = ProgressBar.create(title: "copy #{images.size} files", total: images.size, format: "%t %c / %C : %B Rate: %R %E")
   copied_images = Array.new
   images.each do | to_copy |
+    progress.log("Working on #{to_copy}")
     res = to_copy.copy
     if res
       copied_images << res
@@ -142,7 +145,7 @@ end
 def process_commandline(args)
   configs = []
   if (args.size == 0)
-    config_file_path = File.join(ENV['HOME'], '.config', 'imagelib.yaml')
+    config_file_path = File.join(HOME, '.config', 'imagelib.yaml')
     configs = YAML::load_file(config_file_path)
     puts "Found configs: #{configs}"
   else
@@ -188,6 +191,7 @@ def copy_to_lib(args)
   #  exit 0
 
   suffix = ".#{calc_suffix}"
+  puts "User: #{suffix}"
   configs = process_commandline(args)
   images = collect_images(configs)
   images = images.sort{ |a,b|
